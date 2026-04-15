@@ -3,7 +3,6 @@
   "description": "HyperI default Renovate preset",
   "extends": [
     "config:recommended",
-    "docker:pinDigests",
     ":pinActionsToFullSha",
     "schedule:weekly"
   ],
