@@ -3,7 +3,7 @@
   "description": "HyperI default Renovate preset",
   "extends": [
     "config:recommended",
-    ":pinActionsToFullSha",
+    "helpers:pinGitHubActionDigests",
     "schedule:weekly"
   ],
   "labels": ["dependencies"],
