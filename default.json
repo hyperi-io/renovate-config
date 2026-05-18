@@ -31,6 +31,19 @@
       }
     },
     {
+      "description": "Same-org HyperI packages bypass the cooldown - we publish these ourselves, supply-chain risk for our own packages is governed by our own CI gates and release process, not by external-attacker cooldown logic. Matches anything whose source URL points back to github.com/hyperi-io/* - crates.io, PyPI, npm, GitHub Actions, plus any GHCR images that set the org.opencontainers.image.source label (which the hyperi-ci container handler does by default).",
+      "matchSourceUrls": [
+        "https://github.com/hyperi-io/**"
+      ],
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "Same-org HyperI container images bypass the cooldown - backstop for any ghcr.io/hyperi-io/* image that didn't get the source label set (which would otherwise miss the matchSourceUrls rule above).",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["^ghcr\\.io/hyperi-io/"],
+      "minimumReleaseAge": "0 days"
+    },
+    {
       "description": "Group all GitHub Actions updates",
       "matchManagers": ["github-actions"],
       "groupName": "github-actions",
