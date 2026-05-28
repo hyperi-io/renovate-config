@@ -4,7 +4,8 @@
   "extends": [
     "config:recommended",
     "helpers:pinGitHubActionDigests",
-    "schedule:weekly"
+    "schedule:weekly",
+    ":automergeDisabled"
   ],
   "ignorePresets": [
     "security:minimumReleaseAgeNpm"
@@ -18,16 +19,14 @@
   "minimumReleaseAgeBehaviour": "timestamp-required",
   "packageRules": [
     {
-      "description": "Automerge patch and digest updates when CI passes. Combined with the global minimumReleaseAge above, automerge only fires after the 7-day cooldown elapses, blocking fast-moving supply-chain attacks like axios (Mar 2026), LiteLLM, xinference, TanStack/Mini Shai-Hulud. See https://blog.yossarian.net/2025/11/21/We-should-all-be-using-dependency-cooldowns and https://cooldowns.dev/",
-      "matchUpdateTypes": ["patch", "digest"],
-      "automerge": true
+      "description": "PR-only, always (org policy): NOTHING auto-merges to main. The global minimumReleaseAge (7 days) plus minimumReleaseAgeBehaviour=timestamp-required hold every update until the release is a week old and timestamp-verified, blocking fast-moving supply-chain attacks like axios (Mar 2026), LiteLLM, xinference, TanStack/Mini Shai-Hulud. A human reviews and merges every PR. See https://blog.yossarian.net/2025/11/21/We-should-all-be-using-dependency-cooldowns and https://cooldowns.dev/",
+      "matchUpdateTypes": ["patch", "digest"]
     },
     {
-      "description": "Security/vulnerability fixes bypass the cooldown - CVE patches ship now, not 7 days from now",
+      "description": "Security/vulnerability fixes bypass the COOLDOWN (PR raised immediately, not after 7 days) but are still PR-only - a human merges the CVE patch now.",
       "matchDepTypes": ["*"],
       "vulnerabilityAlerts": {
-        "minimumReleaseAge": "0 days",
-        "automerge": true
+        "minimumReleaseAge": "0 days"
       }
     },
     {
@@ -40,14 +39,13 @@
     {
       "description": "Same-org HyperI container images bypass the cooldown - backstop for any ghcr.io/hyperi-io/* image that didn't get the source label set (which would otherwise miss the matchSourceUrls rule above).",
       "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["^ghcr\\.io/hyperi-io/"],
+      "matchPackageNames": ["ghcr.io/hyperi-io/**"],
       "minimumReleaseAge": "0 days"
     },
     {
-      "description": "Group all GitHub Actions updates",
+      "description": "Group all GitHub Actions updates (PR-only, like everything else)",
       "matchManagers": ["github-actions"],
-      "groupName": "github-actions",
-      "automerge": true
+      "groupName": "github-actions"
     },
     {
       "description": "Group Rust crate updates",
