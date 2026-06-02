@@ -71,6 +71,12 @@
       "description": "Group Docker image updates",
       "matchManagers": ["dockerfile", "docker-compose"],
       "groupName": "docker-images"
+    },
+    {
+      "description": "hyperi-ci's OWN reusable workflows float @main on consumers (always-latest CI) - Renovate must NOT pin or bump the caller. SHA-pinning exists for THIRD-PARTY + project deps; pinning our own CI tool's version at the consumer just makes consumers miss CI fixes (they stuck on stale SHAs). Safety for @main is the internal interface gate (hyperi-ci issue #31), not a consumer pin. Deliberate pins (a chosen @vN, or @sha for a known reason) are still allowed - this rule only stops Renovate from imposing one. Last rule so it overrides helpers:pinGitHubActionDigests + the github-actions group above.",
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["hyperi-io/hyperi-ci"],
+      "enabled": false
     }
   ]
 }
