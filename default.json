@@ -17,6 +17,21 @@
   "dependencyDashboard": true,
   "minimumReleaseAge": "7 days",
   "minimumReleaseAgeBehaviour": "timestamp-required",
+  "customManagers": [
+    {
+      "description": "Backing-service image tags pinned in our own source. testcontainers module libraries ship HARDCODED default image tags (Rust's Kafka default is confluentinc/cp-kafka:6.1.1 from 2021, Redis 5.0 from 2018), and a tag baked into a dependency's source is invisible to every manager -- Renovate reads Cargo.toml, correctly reports the crate current, and never sees the image. Testcontainers for Java, .NET and Node have all deprecated their defaults for this reason; Rust has not, so we pin in our own code and annotate it here. The convention is a `renovate:` comment followed by a BARE TAG on its own line (KAFKA_TAG = \"4.3.1\"), never embedded in the image ref -- RE2 has no lookahead, so picking the right colon out of \"${VAR:-name:tag}\" is not something one pattern can do reliably. Covers Rust consts, Python constants, shell variables and CI scripts with one regex. See hyperi-ai plans/2026-07-29-deps-version-parity.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/\\.rs$/",
+        "/\\.py$/",
+        "/\\.sh$/"
+      ],
+      "matchStrings": [
+        "(?:#|//)\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>[^\\s]+)[^\\n]*\\n[^\\n\"']*[\"'](?<currentValue>[^\"'\\s:]+)[\"']"
+      ],
+      "versioningTemplate": "docker"
+    }
+  ],
   "packageRules": [
     {
       "description": "PR-only, always (org policy): NOTHING auto-merges to main. The global minimumReleaseAge (7 days) plus minimumReleaseAgeBehaviour=timestamp-required hold every update until the release is a week old and timestamp-verified, blocking fast-moving supply-chain attacks like axios (Mar 2026), LiteLLM, xinference, TanStack/Mini Shai-Hulud. A human reviews and merges every PR. See https://blog.yossarian.net/2025/11/21/We-should-all-be-using-dependency-cooldowns and https://cooldowns.dev/",
@@ -71,6 +86,46 @@
       "description": "Group Docker image updates",
       "matchManagers": ["dockerfile", "docker-compose"],
       "groupName": "docker-images"
+    },
+    {
+      "description": "Kafka CLIENT and BROKER bump together, in ONE PR. They are not independent knobs: testcontainers' module encodes a per-image wait strategy and broker port (the Confluent module exposes 9093, the Apache one 9092), and librdkafka supports a protocol range. Split across two PRs you get an intermediate state where the client and broker disagree and the integration tests are the only thing that would have told you. Grouping them makes that suite gate the COMBINATION, which is the only real proof the pair works.",
+      "matchPackageNames": [
+        "rdkafka",
+        "apache/kafka",
+        "apache/kafka-native",
+        "redpandadata/redpanda",
+        "docker.redpanda.com/redpandadata/redpanda"
+      ],
+      "groupName": "kafka client and broker"
+    },
+    {
+      "description": "ClickHouse CLIENT and SERVER bump together. Server defaults move between majors and surface as client failures: from 25.x the entrypoint refuses to leave `default` passwordless unless told, and a client that assumed otherwise just gets 'Authentication failed' with nothing naming the version.",
+      "matchPackageNames": [
+        "clickhouse",
+        "clickhouse/clickhouse-server"
+      ],
+      "groupName": "clickhouse client and server"
+    },
+    {
+      "description": "AWS SDK and the S3-compatible servers we test it against bump together. SDK-side signing and checksum changes are a recurring MinIO/LocalStack compatibility tripwire, and the failure looks like a broken test rather than a version pair.",
+      "matchPackageNames": [
+        "aws-sdk-s3",
+        "aws-config",
+        "object_store",
+        "minio/minio",
+        "localstack/localstack"
+      ],
+      "groupName": "aws sdk and s3-compatible servers"
+    },
+    {
+      "description": "testcontainers and every image it supplies a default for. The crate's wait strategies are written against specific image output -- its OpenBao path waited for 'Vault server started', which OpenBao does not print -- so bumping the crate without the images, or the reverse, breaks container startup with a message that names neither.",
+      "matchPackageNames": [
+        "testcontainers",
+        "testcontainers-modules",
+        "openbao/openbao",
+        "redis"
+      ],
+      "groupName": "testcontainers and its images"
     },
     {
       "description": "hyperi-ci's OWN reusable workflows float @main on consumers (always-latest CI) - Renovate must NOT pin or bump the caller. SHA-pinning exists for THIRD-PARTY + project deps; pinning our own CI tool's version at the consumer just makes consumers miss CI fixes (they stuck on stale SHAs). Safety for @main is the internal interface gate (hyperi-ci issue #31), not a consumer pin. Deliberate pins (a chosen @vN, or @sha for a known reason) are still allowed - this rule only stops Renovate from imposing one. Last rule so it overrides helpers:pinGitHubActionDigests + the github-actions group above.",
