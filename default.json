@@ -128,6 +128,38 @@
       "groupName": "testcontainers and its images"
     },
     {
+      "description": "ClickHouse stays on the LTS line. dfe-infra's versions.yaml picks 26.3.13.31 deliberately (24.8 past-EOL, 26.3.14/15 too fresh at the time) and dfe-engine writes DDL against that server. Gating versions.yaml alone was not enough: nothing parses that file, so the SSoT looked protected while the SAME image pinned in a compose file, a CI script or a chart values file was wide open. That produced dfe-infra#32 (keeper to 26.7, four minors ahead of its own server), dfe-engine#117 (CI to 26.7 while tests/integration/conftest.py stayed on 26.3) and dfe-loader#94 (26.6 -- the exact off-LTS version the 2026-07-16 unification moved AWAY from). Constrained rather than disabled so patches WITHIN the LTS line still flow: gated must not mean unwatched. Widen this bound when the estate moves to a newer LTS, deliberately and in lockstep with the operator.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "clickhouse/clickhouse-server",
+        "clickhouse/clickhouse-keeper",
+        "docker.io/clickhouse/clickhouse-server",
+        "docker.io/clickhouse/clickhouse-keeper"
+      ],
+      "allowedVersions": "<26.4"
+    },
+    {
+      "description": "Kafka cannot exceed what the operator runs. Strimzi 0.51 supports 4.1.x/4.2.0, so 4.2.0 is a hard ceiling and anything above it is a broker the operator will refuse to reconcile. dfe-infra records this against services.kafka-version; this rule makes it hold everywhere the image is pinned, not just in the SSoT file. Verify against strimzi's kafka-versions.yaml before widening.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["apache/kafka", "apache/kafka-native"],
+      "allowedVersions": "<=4.2.0"
+    },
+    {
+      "description": "Redpanda tracks the operator chart's tested pairing, not the newest tag. dfe-infra pins v26.1.8 as the broker the operator chart 26.1.6 pairs with. Left open, Renovate proposed v26.1.14 and v26 on the compose side of repos whose PGO workload already ran v26.1.8 (dfe-loader#95, dfe-archiver#37/#34), so the two pins for one broker drifted apart. Constrained to the 26.1 line so patch bumps still flow.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "redpandadata/redpanda",
+        "docker.redpanda.com/redpandadata/redpanda"
+      ],
+      "allowedVersions": "<26.2"
+    },
+    {
+      "description": "Python baseline for the whole suite. requires-python is '>=3.12', which is a FLOOR and reads to Renovate as permission to offer anything newer -- it proposed python:3.14-slim for dfe-engine (#36). That image would not start: the builder stage produces a 3.12 venv and `COPY --from=builder /app /app` carries it into the runtime, where pyvenv.cfg names a missing interpreter, site-packages sits under lib/python3.12, and every compiled extension is cp312 ABI. The suite moves off 3.12 together, deliberately; widen this when it does.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["python", "ghcr.io/astral-sh/uv"],
+      "allowedVersions": "<3.13"
+    },
+    {
       "description": "hyperi-ci's OWN reusable workflows float @main on consumers (always-latest CI) - Renovate must NOT pin or bump the caller. SHA-pinning exists for THIRD-PARTY + project deps; pinning our own CI tool's version at the consumer just makes consumers miss CI fixes (they stuck on stale SHAs). Safety for @main is the internal interface gate (hyperi-ci issue #31), not a consumer pin. Deliberate pins (a chosen @vN, or @sha for a known reason) are still allowed - this rule only stops Renovate from imposing one. Last rule so it overrides helpers:pinGitHubActionDigests + the github-actions group above.",
       "matchManagers": ["github-actions"],
       "matchDepNames": ["hyperi-io/hyperi-ci"],
