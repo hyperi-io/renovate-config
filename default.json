@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "HyperI default Renovate preset",
+  "description": "HyperI default Renovate preset. commitMessagePrefix is fix(deps): DELIBERATELY -- semantic-release's default rules release on fix/feat/perf and nothing else, so a chore(deps): bump lands on main and never ships. The stack deploys by digest, so an unreleased bump is an undeployed one, and the security PRs this preset works hardest to raise early were the ones that never reached production. Releases do not multiply: semantic-release batches every commit since the last tag into one version, so the only NEW releases are the cycles where dependencies were the only change -- which is the gap. Ship a security patch the same way, as fix(security):.",
   "extends": [
     "config:recommended",
     "helpers:pinGitHubActionDigests",
@@ -13,7 +13,7 @@
   "labels": ["dependencies"],
   "prHourlyLimit": 5,
   "prConcurrentLimit": 10,
-  "commitMessagePrefix": "chore(deps):",
+  "commitMessagePrefix": "fix(deps):",
   "dependencyDashboard": true,
   "minimumReleaseAge": "7 days",
   "minimumReleaseAgeBehaviour": "timestamp-required",
@@ -33,10 +33,6 @@
     }
   ],
   "packageRules": [
-    {
-      "description": "PR-only, always (org policy): NOTHING auto-merges to main. The global minimumReleaseAge (7 days) plus minimumReleaseAgeBehaviour=timestamp-required hold every update until the release is a week old and timestamp-verified, blocking fast-moving supply-chain attacks like axios (Mar 2026), LiteLLM, xinference, TanStack/Mini Shai-Hulud. A human reviews and merges every PR. See https://blog.yossarian.net/2025/11/21/We-should-all-be-using-dependency-cooldowns and https://cooldowns.dev/",
-      "matchUpdateTypes": ["patch", "digest"]
-    },
     {
       "description": "Security/vulnerability fixes bypass the COOLDOWN (PR raised immediately, not after 7 days) but are still PR-only - a human merges the CVE patch now.",
       "matchDepTypes": ["*"],
@@ -91,6 +87,22 @@
       "description": "Group Docker image updates",
       "matchManagers": ["dockerfile", "docker-compose"],
       "groupName": "docker-images"
+    },
+    {
+      "description": "Group the customManagers pins -- the backing-service tags annotated with a `renovate:` comment in our own .rs/.py/.sh source. Every group rule above matches on a BUILT-IN manager, and a custom manager is none of them, so these arrived one PR per dependency: dfe-receiver and dfe-transform-vector each got their own vectordotdev/vector PR for the same upstream binary, with nothing making the pair land together. Custom managers share one identity (`custom.regex`) regardless of how many are declared, so a single rule covers the lot. The old spelling was a bare `regex`; anything before Renovate 37 will not match this.",
+      "matchManagers": ["custom.regex"],
+      "groupName": "annotated-pins"
+    },
+    {
+      "description": "Group the Kubernetes and infrastructure-as-code pins. The docker group covers dockerfile and docker-compose only, so helm chart deps, helm values and OpenTofu/Terraform providers fell through it and arrived one PR per dependency -- dfe-infra alone carried separate PRs for curl, vault, otel-collector and clickhouse-keeper. There is no OpenTofu-specific manager; `terraform` reads .tf either way.",
+      "matchManagers": [
+        "helmv3",
+        "helm-values",
+        "helm-requirements",
+        "terraform",
+        "terragrunt"
+      ],
+      "groupName": "infra-pins"
     },
     {
       "description": "Kafka CLIENT and BROKER bump together, in ONE PR. They are not independent knobs: testcontainers' module encodes a per-image wait strategy and broker port (the Confluent module exposes 9093, the Apache one 9092), and librdkafka supports a protocol range. Split across two PRs you get an intermediate state where the client and broker disagree and the integration tests are the only thing that would have told you. Grouping them makes that suite gate the COMBINATION, which is the only real proof the pair works.",
