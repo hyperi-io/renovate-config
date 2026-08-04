@@ -68,6 +68,11 @@
       "groupName": "rust-dependencies"
     },
     {
+      "description": "Rust bumps must MOVE a version, not just raise a ceiling. Cargo's default rangeStrategy is `auto`, and the manager docs say auto picks `widen` whenever the range carries a 'less than' instruction and `update-lockfile` otherwise -- so our own house style of writing explicit bounds (vrl = '>=0.33.1, <0.34') is precisely what selects widening. The result is a PR that edits Cargo.toml alone and never touches Cargo.lock: nothing resolves differently, the build is byte-identical, and CI goes green having compiled the OLD version. dfe-transform-vrl#24 (2 lines) and dfe-archiver#35 (3 lines) were both exactly that, and a widened 0.x ceiling silently admits a BREAKING line into the next `cargo update`, which is how the `cel` bump got in. `bump` raises the range to start at the new version and updates the lockfile with it, so the thing CI compiles is the thing the PR proposes.",
+      "matchManagers": ["cargo"],
+      "rangeStrategy": "bump"
+    },
+    {
       "description": "Group Python dependency updates",
       "matchManagers": ["pip_requirements", "pip-compile", "pep621"],
       "groupName": "python-dependencies"
