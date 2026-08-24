@@ -148,6 +148,36 @@ window.
 - [Andrew Nesbitt -- Package Managers Need to Cool Down (March 2026)](https://nesbitt.io/2026/03/04/package-managers-need-to-cool-down.html)
 - [Datadog Security Labs -- the case for cooldowns post-axios](https://securitylabs.datadoghq.com/articles/dependency-cooldowns/)
 
+## Git submodules
+
+Renovate ships the `git-submodules` manager **disabled** -- it is opt-in beta.
+A repo that vendors a submodule therefore gets no PRs for it, and nothing
+reports the silence. This preset enables it for the whole org.
+
+That default cost us. dfe-schemas is consumed as a submodule by dfe-engine,
+dfe-loader and dfe-fetcher; with nothing watching, the three pins drifted to
+three different commits -- engine current, loader 26 behind, fetcher 27. The
+stale two were missing the `_org_id` rename on `detection_checkpoint` and the
+fix for JSON columns that cannot be `Nullable`, so two apps were building
+against a schema definition the third had already corrected.
+
+**Every consumer must name a branch in `.gitmodules`:**
+
+    [submodule "schemas"]
+        path = schemas
+        url = https://github.com/hyperi-io/dfe-schemas.git
+        branch = main
+
+Renovate tracks the branch stated there. It also makes
+`git submodule update --remote` agree with the bot, so a human and Renovate
+move the pointer to the same place.
+
+**A bot to move it, a gate to prove it moved.** Renovate raises the PR; it
+does not stop one repo sitting on an unmerged bump for a month. Where several
+repos must agree on one submodule commit, pair this with a drift check that
+fails CI when they diverge -- dfe-infra's `check_submodule_drift.py` is the
+reference implementation.
+
 ## JFrog Private Registry Access
 
 For repos that use JFrog, add `hostRules` to the repo-level `renovate.json`:
