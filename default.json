@@ -18,6 +18,10 @@
   "dependencyDashboard": true,
   "minimumReleaseAge": "7 days",
   "minimumReleaseAgeBehaviour": "timestamp-required",
+  "git-submodules": {
+    "description": "A submodule is a dependency Renovate ships DISABLED for -- the manager is opt-in beta -- so a repo that vendors one gets no PRs and nothing says so. dfe-schemas is consumed as a submodule by dfe-engine, dfe-loader and dfe-fetcher, and with no manager watching them the three pins drifted to three different commits: engine current, loader 26 behind, fetcher 27 behind. What the stale two were missing was not cosmetic -- the _org_id rename on detection_checkpoint and the fix for JSON columns that cannot be Nullable. Enabled here rather than per repo so a repo joins by vendoring a submodule, not by remembering to opt in. Renovate tracks the branch named in .gitmodules, so every consumer states `branch = main` explicitly -- that also makes `git submodule update --remote` agree with the bot.",
+    "enabled": true
+  },
   "customManagers": [
     {
       "description": "Backing-service image tags pinned in our own source. testcontainers module libraries ship HARDCODED default image tags (Rust's Kafka default is confluentinc/cp-kafka:6.1.1 from 2021, Redis 5.0 from 2018), and a tag baked into a dependency's source is invisible to every manager -- Renovate reads Cargo.toml, correctly reports the crate current, and never sees the image. Testcontainers for Java, .NET and Node have all deprecated their defaults for this reason; Rust has not, so we pin in our own code and annotate it here. The convention is a `renovate:` comment followed by a BARE TAG on its own line (KAFKA_TAG = \"4.3.1\"), never embedded in the image ref -- RE2 has no lookahead, so picking the right colon out of \"${VAR:-name:tag}\" is not something one pattern can do reliably. Covers Rust consts, Python constants, shell variables and CI scripts with one regex. See hyperi-ai plans/2026-07-29-deps-version-parity.",
