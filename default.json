@@ -172,10 +172,16 @@
       "allowedVersions": "<26.3"
     },
     {
-      "description": "Python baseline for the whole suite. requires-python is '>=3.12', which is a FLOOR and reads to Renovate as permission to offer anything newer -- it proposed python:3.14-slim for dfe-engine (#36). That image would not start: the builder stage produces a 3.12 venv and `COPY --from=builder /app /app` carries it into the runtime, where pyvenv.cfg names a missing interpreter, site-packages sits under lib/python3.12, and every compiled extension is cp312 ABI. The suite moves off 3.12 together, deliberately; widen this when it does.",
+      "description": "Python baseline for the whole suite: the 3.14 line. A requires-python floor reads to Renovate as permission to offer anything newer, and an image whose builder venv names a different interpreter than its runtime will not start (dfe-engine#36: a 3.12 venv carried into a 3.14 runtime). So the suite moves interpreters together, deliberately. This is a REGEX, not a comparator: docker versioning has no ranges, and the npm-semver fallback reads a suffixed tag like `3.14-slim` as a prerelease that matches nothing, so the old `<3.13` silently blocked every suffixed tag, patches included. Matches 3.14, 3.14.N and their suffixed variants. Move it to 3.15 when the suite does.",
       "matchDatasources": ["docker"],
-      "matchPackageNames": ["python", "ghcr.io/astral-sh/uv"],
-      "allowedVersions": "<3.13"
+      "matchPackageNames": ["python"],
+      "allowedVersions": "/^3\\.14(\\.\\d+)?(-.+)?$/"
+    },
+    {
+      "description": "uv's builder images carry the interpreter in the tag (`python3.14-trixie-slim`, `0.9.0-python3.14-trixie-slim`), so they follow the same 3.14 line as the python runtime they hand a venv to: builder and runtime interpreters must match. A plain version tag (`0.9.5`, the uv binary copied into another image) carries no interpreter and keeps updating.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/astral-sh/uv"],
+      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$|python3\\.14-/"
     },
     {
       "description": "hyperi-ci's OWN reusable workflows float @main on consumers (always-latest CI) - Renovate must NOT pin or bump the caller. SHA-pinning exists for THIRD-PARTY + project deps; pinning our own CI tool's version at the consumer just makes consumers miss CI fixes (they stuck on stale SHAs). Safety for @main is the internal interface gate (hyperi-ci issue #31), not a consumer pin. Deliberate pins (a chosen @vN, or @sha for a known reason) are still allowed - this rule only stops Renovate from imposing one. Last rule so it overrides helpers:pinGitHubActionDigests + the github-actions group above.",
