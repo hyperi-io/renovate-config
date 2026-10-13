@@ -20,7 +20,7 @@
   "minimumReleaseAgeBehaviour": "timestamp-required",
   "customManagers": [
     {
-      "description": "Backing-service image tags pinned in our own source. testcontainers module libraries ship HARDCODED default image tags (Rust's Kafka default is confluentinc/cp-kafka:6.1.1 from 2021, Redis 5.0 from 2018), and a tag baked into a dependency's source is invisible to every manager -- Renovate reads Cargo.toml, correctly reports the crate current, and never sees the image. Testcontainers for Java, .NET and Node have all deprecated their defaults for this reason; Rust has not, so we pin in our own code and annotate it here. The convention is a `renovate:` comment followed by a BARE TAG on its own line (KAFKA_TAG = \"4.3.1\"), never embedded in the image ref -- RE2 has no lookahead, so picking the right colon out of \"${VAR:-name:tag}\" is not something one pattern can do reliably. Covers Rust consts, Python constants, shell variables and CI scripts with one regex. See hyperi-ai plans/2026-07-29-deps-version-parity.",
+      "description": "Backing-service image tags pinned in our own source. testcontainers module libraries ship HARDCODED default image tags (Rust's Kafka default is confluentinc/cp-kafka:6.1.1 from 2021, Redis 5.0 from 2018), and a tag baked into a dependency's source is invisible to every manager -- Renovate reads Cargo.toml, correctly reports the crate current, and never sees the image. Testcontainers for Java, .NET and Node have all deprecated their defaults for this reason; Rust has not, so we pin in our own code and annotate it here. The convention is a `renovate:` comment followed by a BARE TAG on its own line (KAFKA_TAG = \"4.3.1\"), never embedded in the image ref -- RE2 has no lookahead, so picking the right colon out of \"${VAR:-name:tag}\" is not something one pattern can do reliably. Covers Rust consts, Python constants, shell variables and CI scripts with one regex. A digest assigned on the line after the tag (one comment line between and a rustfmt wrap are allowed) is captured as currentDigest, so a tag bump moves the digest with it. Without it Renovate rewrites the tag and leaves the old digest, and docker keeps pulling the old image. See hyperi-ai plans/2026-07-29-deps-version-parity.",
       "customType": "regex",
       "managerFilePatterns": [
         "/\\.rs$/",
@@ -28,7 +28,7 @@
         "/\\.sh$/"
       ],
       "matchStrings": [
-        "(?:#|//)\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>[^\\s]+)[^\\n]*\\n[^\\n\"']*[\"'](?<currentValue>[^\"'\\s:]+)[\"']"
+        "(?:#|//)\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>[^\\s]+)[^\\n]*\\n[^\\n\"']*[\"'](?<currentValue>[^\"'\\s:]+)[\"'](?:[^\\n]*\\n(?:[ \\t]*(?:#|//)[ \\t]*[^r\\s][^\\n]*\\n)?[^\\n\"'=]*=[ \\t]*(?:\\n[ \\t]*)?[\"'](?<currentDigest>sha256:[a-f0-9]{64})[\"'])?"
       ],
       "versioningTemplate": "docker"
     }
